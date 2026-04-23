@@ -40,9 +40,8 @@ Built with **FastAPI**, **React**, and the **Google Cloud Platform** API suite a
 event-planner/
 ├── backend/
 │   ├── main.py                  # FastAPI app entry point
-│   ├── .env                     # API keys (never committed)
-│   ├── .env.example             # Template for required env vars
-│   ├── client_secret.json       # OAuth credentials (never committed)
+│   ├── .env                     # API keys 
+│   ├── client_secret.json       # OAuth credentials 
 │   ├── requirements.txt
 │   ├── routers/
 │   │   ├── plan.py              # /api/plan, /api/recalculate, /api/export, /api/place
