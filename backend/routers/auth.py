@@ -2,23 +2,31 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse, JSONResponse
 from google_auth_oauthlib.flow import Flow
 from pathlib import Path
+import os, json
 
 router = APIRouter()
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 CLIENT_SECRET_PATH = Path(__file__).parent.parent / "client_secret.json"
-REDIRECT_URI = "http://localhost:8000/auth/callback"
+REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI", "http://localhost:8000/auth/callback")
+
+
+def _make_flow() -> Flow:
+    secret_json = os.getenv("GOOGLE_CLIENT_SECRET_JSON")
+    if secret_json:
+        return Flow.from_client_config(
+            json.loads(secret_json), scopes=SCOPES, redirect_uri=REDIRECT_URI
+        )
+    return Flow.from_client_secrets_file(
+        str(CLIENT_SECRET_PATH), scopes=SCOPES, redirect_uri=REDIRECT_URI
+    )
 
 # Store the whole flow object so login and callback share the same session
 _store = {}
 
 @router.get("/auth/login")
 def login():
-    flow = Flow.from_client_secrets_file(
-        str(CLIENT_SECRET_PATH),
-        scopes=SCOPES,
-        redirect_uri=REDIRECT_URI
-    )
+    flow = _make_flow()
     auth_url, state = flow.authorization_url(
         access_type="offline",
         prompt="consent",

@@ -11,9 +11,11 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 app = FastAPI()  # ← must come first
 
-app.add_middleware(  # ← then middleware
+_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[_frontend_url, "http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

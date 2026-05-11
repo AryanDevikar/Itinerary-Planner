@@ -1,0 +1,12 @@
+backend/venv/
+backend/.env
+backend/client_secret.json
+backend/token.json
+frontend/
+.git/
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+REPORT.md
+SETUP.md
