@@ -31,20 +31,103 @@ const PRICE = { PRICE_LEVEL_FREE: 'Free', PRICE_LEVEL_INEXPENSIVE: '$', PRICE_LE
 function InputScreen({ onSubmit, loading }) {
   const [message,  setMessage]  = useState('')
   const [maxStops, setMaxStops] = useState(4)
-  const [mode,     setMode]     = useState('walking')
+  const [mode,     setMode]     = useState('driving')
+  const [history,      setHistory]      = useState([])
+  const [recentPlaces, setRecentPlaces] = useState([])
+  const [origin, setOrigin] = useState('')
+
+  useEffect(() => {
+    axios.get(`${API}/debug/history`)
+      .then(r => setHistory(r.data.queries || []))
+      .catch(() => {})
+    axios.get(`${API}/api/recent-places`)
+      .then(r => setRecentPlaces(r.data.places || []))
+      .catch(() => {})
+  }, [])
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
       <div style={{ maxWidth:560, width:'100%' }}>
-        <p style={{ fontSize:13, letterSpacing:'0.12em', textTransform:'uppercase', color:'var(--accent)', marginBottom:'0.75rem', fontWeight:500 }}>Local Event Planner</p>
-        <h1 style={{ fontSize:'clamp(2rem,5vw,3rem)', lineHeight:1.15, marginBottom:'0.5rem' }}>Where do you want<br/>to go today?</h1>
-        <p style={{ color:'var(--text-secondary)', marginBottom:'2.5rem', fontSize:15 }}>Describe your interests, location, and when — we'll build your itinerary.</p>
-        <form onSubmit={e => { e.preventDefault(); if (message.trim()) onSubmit(message, maxStops, mode) }}>
+        <h1 style={{ fontSize: 36, fontWeight: 800, color: 'var(--accent)', marginBottom: '1.5rem', letterSpacing: '-0.02em' }}>Route-IQ</h1>
+        <p style={{ color:'var(--text-secondary)', marginBottom:'2.5rem', fontSize:24 }}>Where do you want to go today?</p>
+
+        <form onSubmit={e => { e.preventDefault(); if (message.trim()) onSubmit(message, maxStops, mode, origin) }}>
           <textarea value={message} onChange={e => setMessage(e.target.value)}
-            placeholder="e.g. I want to visit coffee shops and bookstores in New Brunswick this Saturday afternoon"
+            placeholder="I want to visit coffee shops and bookstores in New Brunswick, New Jersey"
             rows={4} style={{ width:'100%', padding:'1rem', border:'1.5px solid var(--border)', borderRadius:'var(--radius)', fontFamily:'DM Sans,sans-serif', fontSize:15, background:'var(--surface)', color:'var(--text-primary)', resize:'vertical', outline:'none', lineHeight:1.6 }}
             onFocus={e => e.target.style.borderColor='var(--accent)'}
             onBlur={e  => e.target.style.borderColor='var(--border)'} />
+
+          {/* Recent queries */}
+          {history.length > 0 && (
+            <div style={{ marginTop:10, marginBottom:4 }}>
+              <p style={{ fontSize:11, color:'var(--text-secondary)', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.08em' }}>Recent searches</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {history.map((q, i) => (
+                  <button key={i} type="button"
+                    onClick={() => setMessage(q.message)}
+                    style={{
+                      textAlign:'left', padding:'7px 12px',
+                      background:'var(--surface)', border:'1px solid var(--border)',
+                      borderRadius:8, cursor:'pointer', fontSize:13,
+                      color:'var(--text-primary)', fontFamily:'DM Sans,sans-serif',
+                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                      transition:'border-color 0.15s'
+                    }}
+                    onMouseEnter={e => e.target.style.borderColor='var(--accent)'}
+                    onMouseLeave={e => e.target.style.borderColor='var(--border)'}
+                  >
+                    🕐 {q.message}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recently visited places */}
+          {recentPlaces.length > 0 && (
+            <div style={{ marginTop:14, marginBottom:4 }}>
+              <p style={{ fontSize:11, color:'var(--text-secondary)', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.08em' }}>Recently visited</p>
+              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                {recentPlaces.map((place, i) => (
+                  <div key={place.place_id || i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8 }}>
+                    <span style={{ fontSize:14, flexShrink:0 }}>📍</span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ fontSize:13, fontWeight:500, color:'var(--text-primary)', marginBottom:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{place.name}</p>
+                      <p style={{ fontSize:11, color:'var(--text-secondary)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{place.address}</p>
+                    </div>
+                    {place.rating > 0 && (
+                      <span style={{ fontSize:11, color:'var(--accent)', fontWeight:500, flexShrink:0 }}>★ {place.rating}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Starting point */}
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+              Starting point <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(optional — defaults to first stop)</span>
+            </label>
+            <input
+              type="text"
+              value={origin}
+              onChange={e => setOrigin(e.target.value)}
+              placeholder="123 XYZ Street"
+              style={{
+                width: '100%', padding: '0.75rem 1rem',
+                border: '1.5px solid var(--border)', borderRadius: 'var(--radius)',
+                fontFamily: 'DM Sans, sans-serif', fontSize: 14,
+                background: 'var(--surface)', color: 'var(--text-primary)',
+                outline: 'none', transition: 'border-color 0.2s',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={e  => e.target.style.borderColor = 'var(--border)'}
+            />
+          </div>
+
           <div style={{ display:'flex', alignItems:'center', gap:'1rem', margin:'1rem 0 1.5rem', flexWrap:'wrap' }}>
             <label style={{ fontSize:13, color:'var(--text-secondary)', display:'flex', alignItems:'center', gap:8 }}>
               Max stops
@@ -55,16 +138,20 @@ function InputScreen({ onSubmit, loading }) {
             </label>
             <div style={{ display:'flex', gap:6 }}>
               {MODES.map(m => (
-                <button key={m.value} type="button" onClick={() => setMode(m.value)} style={{ padding:'4px 10px', borderRadius:20, fontSize:12, border:`1.5px solid ${mode===m.value?'var(--accent)':'var(--border)'}`, background:mode===m.value?'var(--accent-light)':'var(--surface)', color:mode===m.value?'var(--accent)':'var(--text-secondary)', cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>
+                <button key={m.value} type="button" onClick={() => setMode(m.value)}
+                  style={{ padding:'4px 10px', borderRadius:20, fontSize:12, border:`1.5px solid ${mode===m.value?'var(--accent)':'var(--border)'}`, background:mode===m.value?'var(--accent-light)':'var(--surface)', color:mode===m.value?'var(--accent)':'var(--text-secondary)', cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>
                   {m.label}
                 </button>
               ))}
             </div>
           </div>
-          <button type="submit" disabled={loading || !message.trim()} style={{ width:'100%', padding:'0.875rem', background:loading?'var(--border)':'var(--accent)', color:loading?'var(--text-secondary)':'#fff', border:'none', borderRadius:'var(--radius)', fontFamily:'DM Sans,sans-serif', fontSize:15, fontWeight:500, cursor:loading?'not-allowed':'pointer' }}>
+
+          <button type="submit" disabled={loading || !message.trim()}
+            style={{ width:'100%', padding:'0.875rem', background:loading?'var(--border)':'var(--accent)', color:loading?'var(--text-secondary)':'#fff', border:'none', borderRadius:'var(--radius)', fontFamily:'DM Sans,sans-serif', fontSize:15, fontWeight:500, cursor:loading?'not-allowed':'pointer' }}>
             {loading ? 'Planning your day...' : 'Plan my itinerary →'}
           </button>
         </form>
+
         <p style={{ marginTop:'1.5rem', fontSize:13, color:'var(--text-secondary)', textAlign:'center' }}>
           <a href={`${API}/auth/login`} style={{ color:'var(--accent)', textDecoration:'none' }}>Connect Google Calendar</a> to export your itinerary
         </p>
@@ -255,7 +342,7 @@ function TravelBadge({ travel }) {
 }
 
 // ── Results Screen ───────────────────────────────────────────────
-function ResultsScreen({ intent, itinerary: init, alternatives: initAlts, travelTimes: initTravel, directionsPath: initPath, mode, onReset, onExport, exporting, exported }) {
+function ResultsScreen({ intent, itinerary: init, alternatives: initAlts, travelTimes: initTravel, directionsPath: initPath, mode, onReset, onExport, exporting, exported, origin }) {
   const [stops,        setStops]        = useState(init.map(s => ({ ...s, included: true })))
   const [alternatives, setAlternatives] = useState(initAlts || {})
   const [travelTimes,  setTravelTimes]  = useState(initTravel || [])
@@ -280,7 +367,7 @@ async function recalculate(newStops) {
   }
   setRecalcing(true)
   try {
-    const res = await axios.post(`${API}/api/recalculate`, { stops: included, mode })
+    const res = await axios.post(`${API}/api/recalculate`, { stops: included, mode, origin: origin || null })
     setTravelTimes(res.data.travel_times)
     setRoutePath(res.data.directions_path)
   } catch (e) {
@@ -327,7 +414,9 @@ function swapStop(originalId, replacement) {
   recalculate(next)
 }
 
-  const center = includedStops.length > 0
+const center = origin
+  ? { lat: origin.lat, lng: origin.lng }
+  : includedStops.length > 0
     ? { lat: includedStops[0].lat, lng: includedStops[0].lng }
     : { lat: 40.7128, lng: -74.0060 }
 
@@ -346,6 +435,11 @@ function swapStop(originalId, replacement) {
             {recalcing && <span style={{ marginLeft:8, color:'var(--accent)' }}>Updating route...</span>}
           </p>
           <p style={{ fontSize:11, color:'var(--text-secondary)', marginTop:4 }}>Click the number to include/exclude · Click Details for more info</p>
+          {origin && (
+            <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4 }}>
+              📍 Starting from: {origin.name}
+            </p>
+          )}
         </div>
 
         <div style={{ flex:1, overflowY:'auto', padding:'1rem 1.25rem' }}>
@@ -410,6 +504,23 @@ function swapStop(originalId, replacement) {
         <LoadScript googleMapsApiKey={MAPS_KEY}>
           <GoogleMap mapContainerStyle={mapStyles} center={center} zoom={14} options={mapOptions}>
             <Polyline path={routePath} options={{ strokeColor:'#2d5a3d', strokeOpacity:0.85, strokeWeight:4, geodesic:true }} />
+            {/* Origin marker — distinct gold pin */}
+            {origin && (
+              <Marker
+                position={{ lat: origin.lat, lng: origin.lng }}
+                icon={{
+                  path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+                  fillColor:   "#E9C46A",
+                  fillOpacity: 1,
+                  strokeColor: "#0D1B2A",
+                  strokeWeight: 2,
+                  scale: 1.8,
+                  anchor: { x: 12, y: 22 }
+                }}
+                title={`Start: ${origin.name}`}
+                onClick={() => setSelectedStop({ ...origin, name: `📍 ${origin.name}`, address: "Starting point", rating: 0 })}
+              />
+            )}
             {stops.map((stop) => {
               const idx = includedStops.findIndex(s => s.place_id === stop.place_id)
               return (
@@ -461,16 +572,18 @@ export default function App() {
   const [exporting, setExporting] = useState(false)
   const [exported,  setExported]  = useState(false)
 
-  async function handlePlan(message, maxStops, mode) {
-    setLoading(true); setError(null)
-    try {
-      const res = await axios.post(`${API}/api/plan`, { message, max_stops: maxStops, radius_meters: 5000, mode })
-      setResult(res.data); setScreen('results')
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Something went wrong. Please try again.')
-    } finally { setLoading(false) }
-  }
-
+async function handlePlan(message, maxStops, mode, origin) {
+  setLoading(true); setError(null)
+  try {
+    const res = await axios.post(`${API}/api/plan`, {
+      message, max_stops: maxStops, radius_meters: 5000, mode,
+      origin: origin || null
+    })
+    setResult(res.data); setScreen('results')
+  } catch (err) {
+    setError(err.response?.data?.detail || 'Something went wrong. Please try again.')
+  } finally { setLoading(false) }
+}
   async function handleExport(itinerary, date, timeStart, travelTimes, visitDuration) {
     setExporting(true)
     try {
@@ -496,6 +609,7 @@ export default function App() {
           travelTimes={result.travel_times || []}
           directionsPath={result.directions_path || []}
           mode={result.mode || 'walking'}
+          origin={result.origin || null}
           onReset={() => { setScreen('input'); setResult(null); setExported(false) }}
           onExport={handleExport} exporting={exporting} exported={exported}
         />
