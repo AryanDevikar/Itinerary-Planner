@@ -2,7 +2,7 @@
 
 An AI-powered full-stack web application that transforms natural language descriptions into optimized, map-based itineraries — exported directly to Google Calendar.
 
-Built with **FastAPI**, **React**, and the **Google Cloud Platform** API suite as a graduate course project.
+Built with **FastAPI**, **React**, and the **Google Cloud Platform** API suite.
 
 ---
 
